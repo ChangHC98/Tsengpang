@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>猜猜中職球員</title>
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#12281c; --panel:#1b3a29; --line:#2f5640; --text:#eef0e6; --muted:#9db3a2;
+  --ok:#2f9e5b; --near:#d9a21b; --bad:#2b4636; --accent:#ffc83d; --accent-ink:#2a1d00;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#eef2e8; --panel:#ffffff; --line:#c9d6c4; --text:#13301f; --muted:#5b7263;
+    --ok:#2f9e5b; --near:#e0a81f; --bad:#d9e2d4; --accent:#13301f; --accent-ink:#ffffff;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#eef2e8; --panel:#ffffff; --line:#c9d6c4; --text:#13301f; --muted:#5b7263;
+  --bad:#d9e2d4; --accent:#13301f; --accent-ink:#ffffff;
+}
+:root[data-theme="dark"]{
+  --bg:#12281c; --panel:#1b3a29; --line:#2f5640; --text:#eef0e6; --muted:#9db3a2;
+  --bad:#2b4636; --accent:#ffc83d; --accent-ink:#2a1d00;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:18px 14px 40px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+h1{margin:0;font-size:26px;font-weight:900;letter-spacing:.04em}
+.sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+.iconbtn{background:transparent;border:1px solid var(--line);color:var(--text);border-radius:8px;
+  padding:6px 10px;font-size:13px;cursor:pointer}
+.modes{display:flex;gap:6px;margin:0 0 14px}
+.mode{flex:1;background:transparent;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:9px 6px;font-size:14px;font-weight:700;cursor:pointer}
+.mode.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.search{position:relative;display:flex;gap:8px}
+.search input{flex:1;min-width:0;font-size:16px;padding:12px 14px;border-radius:10px;
+  border:2px solid var(--line);background:var(--panel);color:var(--text)}
+.search input:focus{outline:none;border-color:var(--accent)}
+button.go{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;
+  padding:0 18px;font-size:16px;font-weight:800;cursor:pointer}
+button.go:disabled{opacity:.45;cursor:default}
+.sug{position:absolute;left:0;right:70px;top:100%;margin-top:4px;background:var(--panel);
+  border:1px solid var(--line);border-radius:10px;overflow:hidden;z-index:5;display:none}
+.sug button{display:flex;width:100%;justify-content:space-between;gap:8px;text-align:left;
+  background:transparent;border:0;color:var(--text);padding:10px 14px;font-size:15px;cursor:pointer}
+.sug button:hover,.sug button.on{background:var(--bad)}
+.sug small{color:var(--muted)}
+.status{display:flex;justify-content:space-between;margin:12px 2px 8px;color:var(--muted);font-size:14px}
+.scroll{overflow-x:auto;max-width:100%}
+.grid{display:grid;grid-template-columns:1.35fr repeat(5,1fr);gap:4px;min-width:340px}
+.grid .h{font-size:12px;color:var(--muted);text-align:center;padding:2px 0}
+.cell{min-height:54px;border-radius:8px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:4px 2px;font-size:13px;font-weight:700;
+  background:var(--bad);color:var(--text);line-height:1.25;word-break:keep-all}
+.cell.ok{background:var(--ok);color:#fff}
+.cell.near{background:var(--near);color:#1d1500}
+.cell.name{background:var(--panel);border:1px solid var(--line);font-size:14px}
+.cell .arr{font-size:11px;opacity:.9}
+.tdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:3px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:14px 2px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.result{display:none;margin:16px 0;padding:16px;border-radius:12px;background:var(--panel);border:2px solid var(--accent)}
+.result h2{margin:0 0 4px;font-size:20px}
+.result p{margin:4px 0 12px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:9px 14px;font-weight:800;font-size:14px;cursor:pointer}
+.row button.alt{background:transparent;color:var(--text);border:1px solid var(--line)}
+details{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+summary{cursor:pointer;font-weight:700}
+details p,details li{font-size:13px;color:var(--muted)}
+textarea{width:100%;min-height:140px;border-radius:8px;border:1px solid var(--line);background:var(--bg);
+  color:var(--text);padding:10px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.warn{background:var(--near);color:#1d1500;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-bottom:14px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--text);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:700;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>猜猜中職球員</h1>
+    <button class="iconbtn" id="themeBtn" aria-label="切換深淺色">深色 / 淺色</button>
+  </header>
+  <p class="sub">輸入球員名字猜猜看,從球隊、背號、守備位置、年齡、投打線索找出神秘球員。</p>
+
+  <div class="modes" role="group" aria-label="遊戲模式">
+    <button class="mode on" id="modeDaily" aria-pressed="true">每日挑戰</button>
+    <button class="mode" id="modePractice" aria-pressed="false">隨機練習</button>
+  </div>
+
+  <div class="warn" id="sampleWarn">名單來自 Yahoo奇摩運動(2026/10/10),含一、二軍與洋將,可能有已離隊球員。年齡為當時資料。</div>
+
+  <div class="search">
+    <input id="inp" type="text" placeholder="輸入球員姓名" autocomplete="off" enterkeyhint="go" aria-label="球員姓名">
+    <button class="go" id="goBtn">猜</button>
+    <div class="sug" id="sug" role="listbox"></div>
+  </div>
+
+  <div class="status"><span id="left"></span><span id="poolInfo"></span></div>
+
+  <div class="scroll">
+    <div class="grid" id="board"></div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--ok)"></i>完全相符</span>
+    <span><i style="background:var(--near)"></i>接近或部分相符</span>
+    <span><i style="background:var(--bad)"></i>不符</span>
+    <span>背號、年齡:▲ 答案較大 ▼ 答案較小</span>
+    <span>球隊(北→南):味全龍、富邦悍將、樂天桃猿、中信兄弟、統一獅、台鋼雄鷹;相鄰球隊顯示黃色</span>
+  </div>
+
+  <div class="result" id="result">
+    <h2 id="rTitle"></h2>
+    <p id="rBody"></p>
+    <div class="row">
+      <button id="shareBtn">複製結果</button>
+      <button class="alt" id="againBtn">再玩一次</button>
+    </div>
+  </div>
+
+  <details id="importBox">
+    <summary>自訂名單(進階)</summary>
+    <p>每行一位球員,用逗號或 Tab 分隔,欄位順序如下:</p>
+    <p><b>姓名,球隊,背號,守備位置,出生年,投打</b></p>
+    <ul>
+      <li>球隊:中信兄弟、統一獅、樂天桃猿、富邦悍將、味全龍、台鋼雄鷹</li>
+      <li>守備位置:投手、捕手、內野手、外野手(一二三壘、游擊會自動歸為內野手,左中右外野會歸為外野手)</li>
+      <li>出生年:例如 1993(也可直接填年齡,小於 100 會當作年齡)</li>
+      <li>投打:例如 右投左打、左投左打、右投雙打</li>
+    </ul>
+    <textarea id="csv" placeholder="王小明,中信兄弟,12,投手,1995,右投右打"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button id="importBtn">匯入並開始</button>
+      <button class="alt" id="resetBtn">還原範例名單</button>
+    </div>
+    <p id="importMsg"></p>
+  </details>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var MAX = 8;
+  var YEAR = new Date().getFullYear();
+  var TEAMS = {
+    "中信兄弟":"#f5c400","統一獅":"#f47920","樂天桃猿":"#9e1b3d",
+    "富邦悍將":"#2a62c9","味全龍":"#d4161c","台鋼雄鷹":"#1c8a5a"
+  };
+  var TEAM_ALIAS = {
+    "統一7-ELEVEn獅":"統一獅","統一7-Eleven獅":"統一獅","統一7-11獅":"統一獅","統一":"統一獅","統一獅隊":"統一獅",
+    "兄弟":"中信兄弟","中信":"中信兄弟","樂天":"樂天桃猿","桃猿":"樂天桃猿","富邦":"富邦悍將","悍將":"富邦悍將",
+    "味全":"味全龍","台鋼":"台鋼雄鷹","雄鷹":"台鋼雄鷹"
+  };
+  var ORDER = ["味全龍","富邦悍將","樂天桃猿","中信兄弟","統一獅","台鋼雄鷹"]; // 由北到南
+
+  // 資料來源:Yahoo奇摩運動 各隊球員名單(2026/10/10 擷取)
+  var BUILTIN = `尹柏淮,統一獅,84,投手,22,右投右打
+劉予承,統一獅,26,投手,24,右投右打
+劉軒荅,統一獅,23,投手,29,右投右打
+吳承諭,統一獅,57,投手,29,右投左打
+吳紹遠,統一獅,78,投手,21,右投右打
+周彥農,統一獅,45,投手,21,右投左打
+喬登,統一獅,87,投手,27,右投右打
+奧德銳,統一獅,88,投手,29,左投左打
+姚杰宏,統一獅,79,投手,28,右投右打
+布雷克,統一獅,50,投手,32,右投右打
+張宥謙,統一獅,16,投手,20,右投右打
+李其峰,統一獅,30,投手,28,右投右打
+李承鴻,統一獅,86,投手,23,右投右打
+李軍,統一獅,62,投手,20,左投左打
+林原裕,統一獅,19,投手,24,右投右打
+林子崴,統一獅,17,投手,30,左投左打
+林易霆,統一獅,53,投手,20,左投左打
+林詔恩,統一獅,74,投手,22,左投左打
+楊孟沅,統一獅,90,投手,27,左投左打
+楊強森,統一獅,59,投手,23,右投右打
+江少慶,統一獅,76,投手,32,右投右打
+江承峰,統一獅,95,投手,37,右投右打
+獅帝芬,統一獅,42,投手,32,右投左打
+王鏡銘,統一獅,41,投手,40,右投右打
+胡智爲,統一獅,58,投手,32,右投右打
+蒙德茲,統一獅,21,投手,31,左投左打
+辛俊昇,統一獅,69,投手,22,左投左打
+邱浩鈞,統一獅,37,投手,35,右投右打
+郭俊麟,統一獅,75,投手,34,右投右打
+鄭副豪,統一獅,48,投手,26,右投右打
+鄭澔,統一獅,33,投手,24,左投左打
+鄭鈞仁,統一獅,60,投手,30,右投右打
+銳力獅,統一獅,88,投手,29,右投右打
+鍾允華,統一獅,29,投手,22,右投左打
+陳韻文,統一獅,12,投手,30,右投右打
+高偉強,統一獅,63,投手,26,右投右打
+髙塩將樹,統一獅,28,投手,37,右投右打
+黃竣彥,統一獅,40,投手,32,右投右打
+余羿賢,統一獅,31,捕手,22,右投右打
+吳柏賢,統一獅,44,捕手,19,右投右打
+張翔,統一獅,4,捕手,23,右投右打
+張聖豪,統一獅,46,捕手,25,右投左打
+柯育民,統一獅,36,捕手,28,右投右打
+潘磊,統一獅,54,捕手,22,右投左打
+陳重羽,統一獅,65,捕手,30,右投右打
+何恆佑,統一獅,7,一壘手,24,右投左打
+全紹凱,統一獅,27,二壘手,20,右投左打
+張皓崴,統一獅,38,游擊手,21,右投左打
+林培緯,統一獅,25,一壘手,22,右投右打
+林子豪,統一獅,2,三壘手,24,右投左打
+林泓弦,統一獅,67,游擊手,20,右投左打
+林祖傑,統一獅,39,游擊手,35,右投右打
+林靖凱,統一獅,64,二壘手,25,右投右打
+楊竣翔,統一獅,9,二壘手,26,右投右打
+潘傑楷,統一獅,35,三壘手,32,右投左打
+王翾祐,統一獅,15,二壘手,19,右投右打
+許哲晏,統一獅,10,游擊手,28,右投右打
+陳聖平,統一獅,73,游擊手,25,右投左打
+陳重廷,統一獅,66,游擊手,30,右投右打
+陳鏞基,統一獅,13,三壘手,43,右投右打
+張偉聖,統一獅,52,中外野手,28,右投左打
+戴伯丞,統一獅,0,中外野手,22,右投右打
+朱迦恩,統一獅,8,左外野手,25,右投左打
+李丞齡,統一獅,6,右外野手,25,右投右打
+林佳緯,統一獅,20,左外野手,21,右投左打
+林安可,統一獅,77,右外野手,29,左投左打
+田子杰,統一獅,49,右外野手,22,左投左打
+胡金龍,統一獅,51,左外野手,42,右投右打
+蘇智傑,統一獅,32,左外野手,31,右投左打
+邱智呈,統一獅,14,右外野手,25,左投左打
+陳傑憲,統一獅,24,中外野手,32,右投左打
+陳維祥,統一獅,63,左外野手,27,左投左打
+榊原元稀,樂天桃猿,61,投手,26,右投右打
+霸鉧德,樂天桃猿,25,投手,30,左投左打
+麥斯威尼,樂天桃猿,20,投手,28,右投右打
+凱樂,樂天桃猿,26,投手,32,左投右打
+劉家翔,樂天桃猿,18,投手,22,右投右打
+呂詠臻,樂天桃猿,48,投手,27,右投右打
+威能帝,樂天桃猿,49,投手,32,右投右打
+曾家輝,樂天桃猿,44,投手,23,右投右打
+朱承洋,樂天桃猿,22,投手,31,右投左打
+李家明,樂天桃猿,92,投手,25,右投左打
+李柏毓,樂天桃猿,34,投手,20,右投右打
+林子崴,樂天桃猿,54,投手,24,左投左打
+波賽樂,樂天桃猿,88,投手,32,右投右打
+温展樂,樂天桃猿,16,投手,24,右投右打
+王奕翔,樂天桃猿,0,投手,19,右投右打
+王宇翔,樂天桃猿,40,投手,20,右投右打
+王志煊,樂天桃猿,64,投手,25,左投左打
+盧冠宇,樂天桃猿,82,投手,24,右投右打
+舒治浩,樂天桃猿,1,投手,22,右投右打
+艾菩樂,樂天桃猿,23,投手,33,右投右打
+莊孟源,樂天桃猿,88,投手,22,右投右打
+莊承翰,樂天桃猿,21,投手,22,右投左打
+莊昕諺,樂天桃猿,77,投手,25,右投右打
+蘇俊璋,樂天桃猿,0,投手,28,右投右打
+賴威誠,樂天桃猿,83,投手,20,右投右打
+賴胤豪,樂天桃猿,63,投手,21,右投右打
+邱緯綸,樂天桃猿,69,投手,22,左投左打
+邱駿威,樂天桃猿,46,投手,23,右投右打
+陳克羿,樂天桃猿,19,投手,26,右投左打
+陳冠宇,樂天桃猿,17,投手,35,左投左打
+陳柏豪,樂天桃猿,9,投手,27,右投右打
+魔爾曼,樂天桃猿,70,投手,29,右投右打
+黃偉晟,樂天桃猿,4,投手,36,右投右打
+嚴宏鈞,樂天桃猿,62,捕手,29,右投左打
+宋嘉翔,樂天桃猿,2,捕手,22,右投左打
+張閔勛,樂天桃猿,28,捕手,32,右投右打
+林泓育,樂天桃猿,11,捕手,40,右投右打
+毛英傑,樂天桃猿,89,捕手,23,右投右打
+白井雄登,樂天桃猿,26,捕手,22,右投右打
+邱勝宥,樂天桃猿,14,捕手,24,右投右打
+邱邦,樂天桃猿,29,捕手,27,右投右打
+余德龍,樂天桃猿,36,游擊手,38,右投右打
+劉子杰,樂天桃猿,56,三壘手,24,右投右打
+吳桀睿,樂天桃猿,12,一壘手,33,右投右打
+廖健富,樂天桃猿,58,一壘手,27,右投左打
+張趙紘,樂天桃猿,33,二壘手,20,右投右打
+曾冠傑,樂天桃猿,55,游擊手,20,右投右打
+李勛傑,樂天桃猿,95,一壘手,21,右投右打
+杜禹鋒,樂天桃猿,31,二壘手,21,右投右打
+林子偉,樂天桃猿,15,二壘手,32,右投左打
+林承飛,樂天桃猿,6,游擊手,29,右投右打
+林智平,樂天桃猿,79,三壘手,41,右投右打
+梁家榮,樂天桃猿,5,三壘手,31,右投左打
+歐晉,樂天桃猿,16,一壘手,29,左投左打
+游承勳,樂天桃猿,24,游擊手,20,右投左打
+董順傑,樂天桃猿,38,游擊手,22,右投左打
+許賀捷,樂天桃猿,85,二壘手,23,右投左打
+陳佳樂,樂天桃猿,8,一壘手,22,右投左打
+馬傑森,樂天桃猿,94,游擊手,24,右投右打
+馮健庭,樂天桃猿,45,二壘手,34,右投右打
+何品室融,樂天桃猿,66,左外野手,20,右投左打
+威克,樂天桃猿,74,右外野手,34,右投右打
+成晉,樂天桃猿,35,右外野手,27,右投右打
+林政華,樂天桃猿,65,中外野手,24,右投左打
+林禹叡,樂天桃猿,76,中外野手,22,右投左打
+林立,樂天桃猿,39,右外野手,30,右投右打
+蔡鎮宇,樂天桃猿,24,左外野手,29,右投右打
+道威聖,樂天桃猿,84,中外野手,31,右投左打
+邱鑫,樂天桃猿,7,中外野手,21,右投左打
+鍾玉成,樂天桃猿,97,右外野手,23,右投左打
+陳晨威,樂天桃猿,98,中外野手,28,右投左打
+吳世豪,富邦悍將,50,投手,27,右投右打
+威戈神,富邦悍將,49,投手,37,右投右打
+游霆崴,富邦悍將,80,投手,28,右投右打
+黃保羅,富邦悍將,18,投手,22,右投右打
+劉昱言,富邦悍將,91,投手,32,左投左打
+力亞士,富邦悍將,55,投手,38,左投左打
+岳少華,富邦悍將,48,投手,27,右投左打
+廖任磊,富邦悍將,13,投手,33,右投右打
+張奕,富邦悍將,19,投手,32,右投右打
+張瑞麟,富邦悍將,72,投手,34,左投左打
+悍里歐,富邦悍將,54,投手,28,右投右打
+曾峻岳,富邦悍將,60,投手,24,右投右打
+李吳永勤,富邦悍將,38,投手,28,左投左打
+李建勳,富邦悍將,17,投手,30,右投右打
+李東洺,富邦悍將,66,投手,26,右投左打
+林家勝,富邦悍將,73,投手,23,右投左打
+林栚呈,富邦悍將,94,投手,26,右投右打
+歐書誠,富邦悍將,57,投手,33,右投右打
+江國豪,富邦悍將,12,投手,28,右投右打
+王偉軒,富邦悍將,37,投手,28,右投右打
+王浩原,富邦悍將,34,投手,30,右投右打
+瑪帝斯,富邦悍將,55,投手,27,左投左打
+石梓霖,富邦悍將,24,投手,21,右投右打
+羅華韋,富邦悍將,89,投手,35,左投左打
+范柏絜,富邦悍將,15,投手,26,右投右打
+藍愷青,富邦悍將,21,投手,28,左投左打
+賴鴻誠,富邦悍將,32,投手,38,左投左打
+郭泰呈,富邦悍將,96,投手,22,右投左打
+鈴木駿輔,富邦悍將,69,投手,28,右投右打
+陳仕朋,富邦悍將,81,投手,28,左投左打
+陳品宏,富邦悍將,10,投手,21,左投右打
+陳鐿中,富邦悍將,75,投手,23,右投左打
+陳霆豪,富邦悍將,92,投手,20,左投左打
+魔力藍,富邦悍將,44,投手,33,左投左打
+黃宇昇,富邦悍將,84,投手,19,右投右打
+張進德,富邦悍將,47,捕手,33,右投左打
+張育豪,富邦悍將,74,捕手,19,右投右打
+戴培峰,富邦悍將,95,捕手,26,右投左打
+林岱安,富邦悍將,31,捕手,34,右投右打
+江庭毅,富邦悍將,93,捕手,19,右投右打
+盧柏華,富邦悍將,58,捕手,22,右投右打
+蕭憶銘,富邦悍將,61,捕手,26,右投右打
+豊暐,富邦悍將,43,捕手,26,右投右打
+魏全,富邦悍將,59,捕手,28,右投右打
+陳愷佑,富邦悍將,56,游擊手,22,右投左打
+高國麟,富邦悍將,98,一壘手,33,右投右打
+黃騰威,富邦悍將,83,三壘手,20,右投左打
+劉俊豪,富邦悍將,85,游擊手,24,右投左打
+張育成,富邦悍將,99,游擊手,31,右投右打
+李宗賢,富邦悍將,22,游擊手,32,右投右打
+林岳谷,富邦悍將,62,游擊手,24,右投右打
+林澤彬,富邦悍將,2,二壘手,27,右投左打
+楊泯貽,富邦悍將,63,游擊手,24,右投右打
+池恩齊,富邦悍將,97,游擊手,23,右投左打
+王勝偉,富邦悍將,3,游擊手,42,右投右打
+王念好,富邦悍將,5,三壘手,21,右投右打
+王苡丞,富邦悍將,14,一壘手,23,右投左打
+范國宸,富邦悍將,46,一壘手,31,右投右打
+葉子霆,富邦悍將,6,游擊手,28,右投右打
+董子恩,富邦悍將,78,三壘手,23,右投右打
+蔡袁華辰,富邦悍將,64,游擊手,22,右投右打
+辛元旭,富邦悍將,67,三壘手,27,右投右打
+高捷,富邦悍將,4,二壘手,24,右投左打
+黃兆維,富邦悍將,31,一壘手,24,右投右打
+王君佑,富邦悍將,76,左外野手,22,右投右打
+蔡佳諺,富邦悍將,65,中外野手,24,右投右打
+周佳樂,富邦悍將,77,中外野手,26,右投左打
+孔念恩,富邦悍將,82,右外野手,23,右投左打
+張洺瑀,富邦悍將,33,左外野手,28,右投左打
+林哲瑄,富邦悍將,1,中外野手,37,右投右打
+林書逸,富邦悍將,25,中外野手,33,右投左打
+林莛淯,富邦悍將,9,中外野手,25,右投左打
+潘瑋祥,富邦悍將,0,中外野手,24,右投左打
+王正棠,富邦悍將,35,右外野手,30,右投左打
+申皓瑋,富邦悍將,29,中外野手,28,右投右打
+童堉誠,富邦悍將,0,右外野手,26,右投左打
+陳真,富邦悍將,7,左外野手,27,右投右打
+伍鐸,味全龍,52,投手,39,右投右打
+吳俊杰,味全龍,20,投手,29,右投右打
+吳君奕,味全龍,78,投手,25,右投左打
+吳承翰,味全龍,128,投手,22,左投左打
+呂偉晟,味全龍,39,投手,27,右投右打
+張景淯,味全龍,51,投手,26,左投左打
+張鈞守,味全龍,74,投手,23,右投右打
+徐若熙,味全龍,18,投手,25,右投右打
+曹祐齊,味全龍,67,投手,23,右投右打
+曾仁和,味全龍,55,投手,31,右投左打
+李承風,味全龍,96,投手,26,右投右打
+李致霖,味全龍,40,投手,20,右投右打
+李超,味全龍,0,投手,26,右投右打
+林凱威,味全龍,99,投手,30,右投右打
+林子昱,味全龍,71,投手,32,右投右打
+林柏佑,味全龍,13,投手,22,右投右打
+林逸達,味全龍,48,投手,25,右投右打
+林鋅杰,味全龍,77,投手,27,右投右打
+梅賽鍶,味全龍,95,投手,32,左投左打
+楊鈺翔,味全龍,15,投手,24,右投右打
+王伯洋,味全龍,54,投手,26,左投左打
+王定穎,味全龍,90,投手,30,左投左打
+蔣銲,味全龍,33,投手,34,右投右打
+趙璟榮,味全龍,42,投手,28,右投左打
+郭郁政,味全龍,17,投手,28,右投右打
+鋼龍,味全龍,37,投手,36,右投右打
+鎛銳,味全龍,29,投手,37,右投右打
+鑀龍,味全龍,55,投手,30,左投左打
+陳冠偉,味全龍,59,投手,29,右投右打
+陳志杰,味全龍,45,投手,23,右投右打
+陳暐皓,味全龍,56,投手,26,右投右打
+陳禹勳,味全龍,5,投手,37,右投右打
+魔神龍,味全龍,10,投手,30,左投左打
+黃侰程,味全龍,29,投手,21,左投左打
+黃暐傑,味全龍,14,投手,32,右投右打
+龍聖,味全龍,33,投手,30,左投左打
+全浩瑋,味全龍,22,捕手,28,右投右打
+姚冠瑋,味全龍,65,捕手,30,右投右打
+林辰勳,味全龍,9,捕手,24,右投右打
+蔣少宏,味全龍,63,捕手,29,右投右打
+黃贊維,味全龍,123,捕手,21,右投右打
+劉俊緯,味全龍,23,游擊手,21,右投右打
+劉基鴻,味全龍,46,三壘手,25,右投右打
+吉力吉撈．鞏冠,味全龍,4,一壘手,32,右投右打
+吳承皓,味全龍,6,二壘手,19,右投左打
+吳東融,味全龍,61,二壘手,34,右投右打
+周委宏,味全龍,88,二壘手,23,右投左打
+張政禹,味全龍,25,游擊手,26,右投左打
+拿莫．伊漾,味全龍,57,游擊手,27,右投右打
+朱育賢,味全龍,11,一壘手,34,左投左打
+李凱威,味全龍,21,二壘手,28,右投左打
+李展毅,味全龍,36,一壘手,23,右投右打
+石翔宇,味全龍,72,游擊手,29,右投右打
+郭嚴文,味全龍,6,二壘手,37,右投左打
+陳思仲,味全龍,44,三壘手,25,右投右打
+陽念祖,味全龍,26,游擊手,21,右投右打
+黃柏豪,味全龍,16,一壘手,29,右投左打
+冉皓燐,味全龍,82,中外野手,25,右投左打
+張祐嘉,味全龍,81,右外野手,23,左投左打
+張祐銘,味全龍,34,右外野手,29,右投左打
+曾聖安,味全龍,50,中外野手,20,右投左打
+林孝程,味全龍,7,左外野手,26,右投左打
+王順和,味全龍,24,中外野手,24,右投右打
+許博閎,味全龍,58,中外野手,20,右投右打
+郭天信,味全龍,2,中外野手,26,右投左打
+鄭鎧文,味全龍,28,左外野手,34,右投右打
+陳子豪,味全龍,1,右外野手,31,左投左打
+伍祐城,台鋼雄鷹,55,投手,22,右投左打
+吉田一將,台鋼雄鷹,41,投手,36,右投左打
+坎南,台鋼雄鷹,98,投手,37,右投右打
+威鳳山,台鋼雄鷹,80,投手,36,右投右打
+巫柏葳,台鋼雄鷹,22,投手,23,右投左打
+廖乙忠,台鋼雄鷹,67,投手,30,右投右打
+張喜凱,台鋼雄鷹,26,投手,27,右投右打
+張誠恩,台鋼雄鷹,93,投手,21,右投左打
+後勁,台鋼雄鷹,40,投手,37,右投右打
+施子謙,台鋼雄鷹,19,投手,31,右投右打
+曾奕翔,台鋼雄鷹,54,投手,21,左投左打
+李欣穎,台鋼雄鷹,18,投手,26,右投右打
+林建宏,台鋼雄鷹,60,投手,22,右投右打
+林詩翔,台鋼雄鷹,14,投手,25,右投左打
+楊達翔,台鋼雄鷹,99,投手,32,右投右打
+櫻井周斗,台鋼雄鷹,69,投手,27,左投左打
+江承諺,台鋼雄鷹,20,投手,31,左投左打
+王柏傑,台鋼雄鷹,12,投手,21,左投左打
+王維中,台鋼雄鷹,62,投手,34,左投左打
+王躍霖,台鋼雄鷹,41,投手,35,右投右打
+艾速特,台鋼雄鷹,30,投手,33,左投左打
+許峻暘,台鋼雄鷹,84,投手,28,右投左打
+許承恩,台鋼雄鷹,47,投手,19,右投左打
+許育銘,台鋼雄鷹,74,投手,27,左投左打
+謝葆錡,台鋼雄鷹,10,投手,26,右投右打
+賴智垣,台鋼雄鷹,26,投手,29,右投右打
+那瑪夏,台鋼雄鷹,45,投手,34,右投右打
+邱立璿,台鋼雄鷹,48,投手,19,右投右打
+郭俞延,台鋼雄鷹,98,投手,23,右投右打
+陳冠豪,台鋼雄鷹,28,投手,23,右投右打
+陳宇宏,台鋼雄鷹,17,投手,25,右投右打
+陳柏清,台鋼雄鷹,66,投手,27,左投左打
+陳正毅,台鋼雄鷹,11,投手,26,右投右打
+陳重光,台鋼雄鷹,90,投手,24,左投左打
+韋宏亮,台鋼雄鷹,52,投手,20,右投右打
+黃勃睿,台鋼雄鷹,97,投手,29,右投右打
+黃子豪,台鋼雄鷹,85,投手,21,右投右打
+黃子鵬,台鋼雄鷹,69,投手,32,右投左打
+黃紹睿,台鋼雄鷹,56,投手,24,右投右打
+黃群,台鋼雄鷹,46,投手,23,左投左打
+劉時豪,台鋼雄鷹,60,捕手,35,右投左打
+吳明鴻,台鋼雄鷹,31,捕手,31,右投右打
+吳柏萱,台鋼雄鷹,15,捕手,22,右投右打
+廖奕安,台鋼雄鷹,27,捕手,23,右投右打
+張肇元,台鋼雄鷹,29,捕手,28,右投右打
+陳世嘉,台鋼雄鷹,13,捕手,23,右投左打
+陳致嘉,台鋼雄鷹,33,捕手,24,右投右打
+顏采丞,台鋼雄鷹,70,捕手,22,右投右打
+吳念庭,台鋼雄鷹,39,三壘手,33,右投左打
+宋柏翰,台鋼雄鷹,64,一壘手,20,右投左打
+曾子祐,台鋼雄鷹,1,游擊手,22,右投右打
+曾昱磬,台鋼雄鷹,44,二壘手,23,右投左打
+朱盟,台鋼雄鷹,0,游擊手,19,右投右打
+杜家明,台鋼雄鷹,71,三壘手,30,右投右打
+林家鋐,台鋼雄鷹,16,二壘手,24,右投左打
+永田颯太郎,台鋼雄鷹,95,二壘手,25,右投左打
+湯家豪,台鋼雄鷹,36,二壘手,26,右投左打
+胡冠俞,台鋼雄鷹,43,游擊手,26,右投右打
+郭永維,台鋼雄鷹,7,二壘手,38,右投右打
+郭阜林,台鋼雄鷹,59,三壘手,35,右投右打
+陳飛霖,台鋼雄鷹,79,游擊手,25,右投左打
+顏郁軒,台鋼雄鷹,5,一壘手,27,左投左打
+魔鷹,台鋼雄鷹,94,一壘手,35,右投左打
+黃劼希,台鋼雄鷹,42,三壘手,22,右投右打
+黃秉揚,台鋼雄鷹,25,三壘手,23,右投右打
+孫易伸,台鋼雄鷹,13,中外野手,26,右投右打
+張豈豪,台鋼雄鷹,49,中外野手,24,右投右打
+林威漢,台鋼雄鷹,8,右外野手,22,右投左打
+王博玄,台鋼雄鷹,6,右外野手,26,右投左打
+王柏融,台鋼雄鷹,9,左外野手,32,右投左打
+紀慶然,台鋼雄鷹,24,中外野手,24,右投左打
+葉保弟,台鋼雄鷹,45,右外野手,27,左投左打
+董秉軒,台鋼雄鷹,0,右外野手,28,右投左打
+藍寅倫,台鋼雄鷹,88,右外野手,36,右投左打
+陳文杰,台鋼雄鷹,3,中外野手,28,右投左打
+顏清浤,台鋼雄鷹,37,左外野手,25,右投左打
+高聖恩,台鋼雄鷹,50,中外野手,25,右投右打
+柯威士,中信兄弟,24,投手,35,右投右打
+黎克,中信兄弟,18,投手,30,右投右打
+伍立辰,中信兄弟,83,投手,24,右投右打
+余謙,中信兄弟,49,投手,25,右投右打
+劉亦智,中信兄弟,73,投手,23,左投右打
+勝騎士,中信兄弟,30,投手,31,右投右打
+吳俊偉,中信兄弟,94,投手,27,右投右打
+呂彥青,中信兄弟,58,投手,30,左投左打
+張祖恩,中信兄弟,91,投手,22,左投左打
+彭識穎,中信兄弟,21,投手,34,左投左打
+德保拉,中信兄弟,46,投手,38,左投右打
+曾品洋,中信兄弟,55,投手,27,右投右打
+李博登,中信兄弟,38,投手,33,左投左打
+李振昌,中信兄弟,21,投手,39,右投右打
+林展樟,中信兄弟,11,投手,25,右投右打
+林暉盛,中信兄弟,12,投手,27,右投右打
+楊志龍,中信兄弟,41,投手,33,右投右打
+江忠城,中信兄弟,20,投手,36,右投右打
+游竣宥,中信兄弟,27,投手,23,左投左打
+王凱程,中信兄弟,15,投手,34,右投右打
+王奕凱,中信兄弟,54,投手,25,左投左打
+盧孟揚,中信兄弟,71,投手,22,右投左打
+羅戈,中信兄弟,32,投手,29,右投右打
+菲力士,中信兄弟,34,投手,36,右投右打
+蔡齊哲,中信兄弟,50,投手,30,右投右打
+謝榮豪,中信兄弟,79,投手,36,右投右打
+鄧朝駿,中信兄弟,35,投手,24,右投右打
+鄭凱文,中信兄弟,19,投手,37,右投右打
+鄭浩均,中信兄弟,33,投手,28,右投右打
+錢可倫,中信兄弟,84,投手,22,左投左打
+陳冠穎,中信兄弟,81,投手,22,右投右打
+陳柏均,中信兄弟,56,投手,25,左投左打
+陳琥,中信兄弟,62,投手,28,右投左打
+韋禮加,中信兄弟,89,投手,27,右投右打
+馮皓,中信兄弟,59,投手,22,右投右打
+魏碩成,中信兄弟,14,投手,29,左投左打
+黃博多,中信兄弟,37,投手,28,右投右打
+黃弘毅,中信兄弟,84,投手,25,右投右打
+黃恩賜,中信兄弟,64,投手,30,右投左打
+徐博瑋,中信兄弟,97,捕手,25,右投右打
+林吳晉瑋,中信兄弟,0,捕手,24,右投左打
+胡孟智,中信兄弟,52,捕手,20,右投右打
+陳九登,中信兄弟,72,捕手,21,右投右打
+陳統恩,中信兄弟,48,捕手,24,右投右打
+高宇杰,中信兄弟,65,捕手,29,右投右打
+黃鈞聲,中信兄弟,82,捕手,37,右投右打
+岳東華,中信兄弟,98,二壘手,30,右投左打
+張仁瑋,中信兄弟,28,二壘手,23,右投右打
+張士綸,中信兄弟,4,游擊手,21,右投左打
+徐紹予,中信兄弟,69,一壘手,20,右投右打
+林瑞鈞,中信兄弟,75,二壘手,25,右投左打
+楊祥禾,中信兄弟,6,游擊手,23,右投右打
+江坤宇,中信兄弟,90,游擊手,26,右投右打
+王威晨,中信兄弟,9,三壘手,35,右投左打
+王政順,中信兄弟,61,三壘手,29,右投左打
+蔡琞傑,中信兄弟,18,二壘手,19,右投左打
+蘇緯達,中信兄弟,96,一壘手,35,右投左打
+許基宏,中信兄弟,74,一壘手,33,右投左打
+陳俊秀,中信兄弟,29,一壘手,37,右投右打
+馬鋼,中信兄弟,68,三壘手,24,右投右打
+黃韋盛,中信兄弟,66,一壘手,27,右投右打
+劉貴元,中信兄弟,85,中外野手,24,右投左打
+宋晟睿,中信兄弟,88,左外野手,23,右投右打
+岳政華,中信兄弟,92,中外野手,25,左投左打
+張志豪,中信兄弟,7,中外野手,39,右投左打
+曾頌恩,中信兄弟,1,中外野手,26,右投右打
+李聖裕,中信兄弟,2,中外野手,29,右投左打
+林志綱,中信兄弟,47,左外野手,27,右投左打
+許庭綸,中信兄弟,13,中外野手,20,右投右打
+詹子賢,中信兄弟,39,左外野手,32,右投右打
+黃鈞麟,中信兄弟,60,右外野手,22,左投左打`;
+
+  var roster = [], builtin = [], practiceRoster = [], mode = "daily", target = null, guesses = [], over = false, isSample = true;
+
+  function $(id){return document.getElementById(id)}
+
+  function normTeam(t){
+    t = (t||"").trim();
+    if (TEAMS[t]) return t;
+    if (TEAM_ALIAS[t]) return TEAM_ALIAS[t];
+    for (var k in TEAMS){ if (t.indexOf(k)>=0 || k.indexOf(t)>=0 && t.length>1) return k; }
+    for (var a in TEAM_ALIAS){ if (t.indexOf(a)>=0) return TEAM_ALIAS[a]; }
+    return null;
+  }
+  function parseRoster(text){
+    var out=[], bad=0;
+    text.split(/\r?\n/).forEach(function(line){
+      line=line.trim(); if(!line) return;
+      var p=line.split(/[,\t，]/).map(function(s){return s.trim()});
+      if(p.length<6){bad++;return}
+      var team=normTeam(p[1]), no=parseInt(p[2],10), by=parseInt(p[4],10);
+      var hand=p[5].replace(/\s/g,"");
+      if(!team||isNaN(no)||isNaN(by)||!/^[左右].*[左右雙]/.test(hand)){ if(out.length||bad) bad++; else bad++; return }
+      var age = by<100 ? by : YEAR-by;
+      var pos = p[3];
+      if (/外野/.test(pos)) pos = "外野手";
+      else if (/壘手|游擊/.test(pos)) pos = "內野手";
+      out.push({name:p[0],team:team,no:no,pos:pos,age:age,hand:hand});
+    });
+    return {list:out,bad:bad};
+  }
+  function loadRoster(){
+    builtin=parseRoster(BUILTIN).list;
+    var saved=null;
+    try{ saved=localStorage.getItem("cpbl_roster_v1"); }catch(e){}
+    if(saved){
+      var r=parseRoster(saved);
+      if(r.list.length>=5){ practiceRoster=r.list; isSample=false; return; }
+    }
+    practiceRoster=builtin; isSample=true;
+  }
+
+  // 每日題目:以台灣時間日期為種子,所有人同一天答案相同
+  function taipeiDate(){ return new Date(Date.now()+8*3600*1000).toISOString().slice(0,10); }
+  function hashStr(str){
+    var h=2166136261;
+    for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+    return h>>>0;
+  }
+  function pkey(p){ return p.name+"@"+p.team; }
+  function dailyStorageKey(){ return "cpbl_daily_"+taipeiDate(); }
+  function saveDaily(){
+    if(mode!=="daily") return;
+    try{ localStorage.setItem(dailyStorageKey(), JSON.stringify(guesses.map(pkey))); }catch(e){}
+  }
+
+  function hands(h){ return {t:h.charAt(0), b:h.charAt(2)||h.charAt(h.length-1)} }
+  function cmpNum(g,t,near){
+    if(g===t) return {c:"ok",a:""};
+    return {c:Math.abs(g-t)<=near?"near":"",a:g<t?"▲":"▼"};
+  }
+  function evaluate(g,t){
+    var r={};
+    var gi=ORDER.indexOf(g.team), ti=ORDER.indexOf(t.team);
+    if(gi===ti) r.team={c:"ok",a:""};
+    else r.team={c:Math.abs(gi-ti)===1?"near":"",a:ti<gi?"往北 ▲":"往南 ▼"};
+    r.no = cmpNum(g.no,t.no,5);
+    r.pos = g.pos===t.pos?"ok":"";
+    r.age = cmpNum(g.age,t.age,2);
+    var gh=hands(g.hand), th=hands(t.hand);
+    r.hand = g.hand===t.hand?"ok":((gh.t===th.t||gh.b===th.b)?"near":"");
+    return r;
+  }
+
+  function cell(cls,txt,arr){
+    return '<div class="cell '+cls+'">'+txt+(arr?'<span class="arr">'+arr+'</span>':'')+'</div>';
+  }
+  function renderBoard(){
+    var h='<div class="h">球員</div><div class="h">球隊</div><div class="h">背號</div><div class="h">位置</div><div class="h">年齡</div><div class="h">投打</div>';
+    guesses.forEach(function(g){
+      var r=evaluate(g,target);
+      h+='<div class="cell name">'+g.name+'</div>';
+      h+=cell(r.team.c,'<span><span class="tdot" style="background:'+TEAMS[g.team]+'"></span></span>'+g.team,r.team.a);
+      h+=cell(r.no.c,g.no,r.no.a);
+      h+=cell(r.pos,g.pos);
+      h+=cell(r.age.c,g.age,r.age.a);
+      h+=cell(r.hand,g.hand);
+    });
+    $("board").innerHTML=h;
+    $("left").textContent="剩餘 "+(MAX-guesses.length)+" 次機會";
+    $("poolInfo").textContent= mode==="daily" ? taipeiDate()+" 每日題目" : "名單共 "+roster.length+" 人";
+    $("sampleWarn").style.display=(mode==="daily"||isSample)?"block":"none";
+  }
+
+  function newGame(){
+    guesses=[]; over=false;
+    $("result").style.display="none";
+    $("inp").value=""; $("inp").disabled=false; $("goBtn").disabled=false;
+    hideSug();
+    if(mode==="daily"){
+      var date=taipeiDate();
+      target=builtin[hashStr("cpbl-guess-"+date)%builtin.length];
+      var saved=null;
+      try{ saved=JSON.parse(localStorage.getItem(dailyStorageKey())||"null"); }catch(e){}
+      if(saved&&saved.length){
+        saved.forEach(function(k){
+          var p=builtin.filter(function(x){return pkey(x)===k})[0];
+          if(p&&guesses.indexOf(p)<0) guesses.push(p);
+        });
+      }
+      renderBoard();
+      if(guesses.length&&guesses[guesses.length-1]===target) finish(true,true);
+      else if(guesses.length>=MAX) finish(false,true);
+    } else {
+      target=roster[Math.floor(Math.random()*roster.length)];
+      renderBoard();
+    }
+  }
+
+  function setMode(m){
+    mode=m;
+    roster = m==="daily" ? builtin : practiceRoster;
+    $("modeDaily").className="mode"+(m==="daily"?" on":"");
+    $("modePractice").className="mode"+(m==="practice"?" on":"");
+    $("modeDaily").setAttribute("aria-pressed",m==="daily");
+    $("modePractice").setAttribute("aria-pressed",m==="practice");
+    newGame();
+  }
+
+  function finish(win,restoring){
+    over=true; $("inp").disabled=true; $("goBtn").disabled=true;
+    $("rTitle").textContent = win ? "答對了!" : "這次沒猜中";
+    $("rBody").textContent = (win ? "用了 "+guesses.length+" 次猜中:" : "答案是:")+
+      target.name+"("+target.team+" / "+target.no+"號 / "+target.pos+" / "+target.age+"歲 / "+target.hand+")"+
+      (mode==="daily" ? "。明天(台灣時間 0 點後)會有新的題目。" : "");
+    $("againBtn").textContent = mode==="daily" ? "玩隨機練習" : "再玩一次";
+    $("result").style.display="block";
+    if(!restoring) $("result").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
+
+  function submit(g){
+    if(over) return;
+    if(!g){
+      var q=$("inp").value.trim();
+      var m=roster.filter(function(p){return p.name===q});
+      if(m.length===1) g=m[0];
+      else if(m.length>1){ showSug(); toast("有同名球員,請從清單選擇"); return }
+      else if(sugList.length===1) g=sugList[0];
+      else { toast("名單裡找不到這位球員"); return }
+    }
+    if(guesses.indexOf(g)>=0){ toast("已經猜過了"); return }
+    guesses.push(g); saveDaily();
+    $("inp").value=""; hideSug(); renderBoard();
+    if(g===target) finish(true);
+    else if(guesses.length>=MAX) finish(false);
+  }
+
+  // suggestions
+  var sugIdx=-1, sugList=[];
+  function showSug(){
+    var q=$("inp").value.trim();
+    if(!q){hideSug();return}
+    sugList=roster.filter(function(p){return p.name.indexOf(q)>=0 && guesses.indexOf(p)<0}).slice(0,6);
+    if(!sugList.length){hideSug();return}
+    sugIdx=-1;
+    $("sug").innerHTML=sugList.map(function(p,i){
+      return '<button type="button" data-i="'+i+'" role="option">'+p.name+'<small>'+p.team+' #'+p.no+'</small></button>';
+    }).join("");
+    $("sug").style.display="block";
+  }
+  function hideSug(){$("sug").style.display="none";sugList=[];sugIdx=-1}
+
+  $("inp").addEventListener("input",showSug);
+  $("inp").addEventListener("keydown",function(e){
+    if(e.key==="ArrowDown"&&sugList.length){e.preventDefault();sugIdx=(sugIdx+1)%sugList.length;hl()}
+    else if(e.key==="ArrowUp"&&sugList.length){e.preventDefault();sugIdx=(sugIdx-1+sugList.length)%sugList.length;hl()}
+    else if(e.key==="Enter"){
+      e.preventDefault();
+      if(sugIdx>=0) submit(sugList[sugIdx]);
+      else submit();
+    }
+  });
+  function hl(){
+    var bs=$("sug").children;
+    for(var i=0;i<bs.length;i++) bs[i].className=i===sugIdx?"on":"";
+  }
+  $("sug").addEventListener("mousedown",function(e){e.preventDefault()});
+  $("sug").addEventListener("click",function(e){
+    var b=e.target.closest("button"); if(!b) return;
+    submit(sugList[+b.getAttribute("data-i")]);
+  });
+  $("goBtn").addEventListener("click",function(){
+    submit();
+  });
+  document.addEventListener("click",function(e){ if(!e.target.closest(".search")) hideSug() });
+
+  // share
+  $("shareBtn").addEventListener("click",function(){
+    var win=guesses[guesses.length-1]===target;
+    var lines=["猜猜中職球員"+(mode==="daily"?" 每日 "+taipeiDate():"")+" "+(win?guesses.length:"X")+"/"+MAX];
+    guesses.forEach(function(g){
+      var r=evaluate(g,target);
+      var f=function(c){return c==="ok"?"🟩":(c==="near"?"🟨":"⬛")};
+      lines.push(f(r.team.c)+f(r.no.c)+f(r.pos)+f(r.age.c)+f(r.hand));
+    });
+    var txt=lines.join("\n");
+    try{
+      navigator.clipboard.writeText(txt).then(function(){toast("已複製")},function(){toast(txt)});
+    }catch(e){ toast("無法自動複製") }
+  });
+  $("againBtn").addEventListener("click",function(){ if(mode==="daily") setMode("practice"); else newGame(); });
+  $("modeDaily").addEventListener("click",function(){ if(mode!=="daily") setMode("daily"); });
+  $("modePractice").addEventListener("click",function(){ if(mode!=="practice") setMode("practice"); });
+
+  // import
+  $("importBtn").addEventListener("click",function(){
+    var text=$("csv").value;
+    var r=parseRoster(text);
+    if(r.list.length<5){
+      $("importMsg").textContent="只讀到 "+r.list.length+" 位球員(略過 "+r.bad+" 行)。至少需要 5 位,請檢查格式。";
+      return;
+    }
+    try{ localStorage.setItem("cpbl_roster_v1",text); }catch(e){}
+    practiceRoster=r.list; isSample=false;
+    $("importMsg").textContent="匯入完成:"+r.list.length+" 位球員"+(r.bad?",略過 "+r.bad+" 行格式不符":"")+"。自訂名單只用在「隨機練習」,每日挑戰固定使用內建名單。";
+    setMode("practice");
+  });
+  $("resetBtn").addEventListener("click",function(){
+    try{ localStorage.removeItem("cpbl_roster_v1"); }catch(e){}
+    loadRoster(); $("importMsg").textContent="已還原內建名單。"; setMode(mode);
+  });
+
+  // theme
+  $("themeBtn").addEventListener("click",function(){
+    var cur=document.documentElement.getAttribute("data-theme");
+    var dark = cur ? cur==="dark" : !window.matchMedia("(prefers-color-scheme: light)").matches;
+    document.documentElement.setAttribute("data-theme",dark?"light":"dark");
+  });
+
+  var tt;
+  function toast(m){
+    var t=$("toast"); t.textContent=m; t.className="toast show";
+    clearTimeout(tt); tt=setTimeout(function(){t.className="toast"},1800);
+  }
+
+  loadRoster(); setMode("daily");
+})();
+</script>
+</body>
+</html>
